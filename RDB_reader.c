@@ -247,8 +247,6 @@ int host_cmd_get_temperature(int fd, int *temperature)
 	sleep(1);
 	
 	read(fd,&buf, resp_len);
-	for(int i=0; i < resp_len; i++)
-		printf("0x%02x ", buf[i]);
 	
 	if(buf[4] == 0)
 		*temperature = -buf[5];
@@ -258,6 +256,115 @@ int host_cmd_get_temperature(int fd, int *temperature)
 	return 0;
 }
 
+int host_cmd_get_gpio(int fd, int *gpio1, int *gpio2)
+{
+	unsigned char buf[64];
+	int resp_len = 7;
+
+	write(fd,&cmd_gpio_get[0],strlen(&cmd_gpio_get[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+	
+	*gpio1 = buf[4];
+	*gpio2 = buf[5];
+
+	return 0;
+}
+
+int host_cmd_set_gpio(int fd, int pin, int value)
+{
+	unsigned char buf[64];
+	int resp_len = 6;
+
+	if(pin == 0x03)
+	{
+		cmd_gpio_set[4] = 0x03;
+		if(value == 0)
+		{
+			cmd_gpio_set[5] = 0x00;
+			cmd_gpio_set[6] = 0xF6;
+		}
+		else	
+		{
+			cmd_gpio_set[5] = 0x01;
+			cmd_gpio_set[6] = 0xF5;
+		}
+	}
+	else if(pin == 0x04)
+	{
+		cmd_gpio_set[4] = 0x04;
+		if(value == 0)
+		{
+			cmd_gpio_set[5] = 0x00;
+			cmd_gpio_set[6] = 0xF5;
+		}
+		else	
+		{
+			cmd_gpio_set[5] = 0x01;
+			cmd_gpio_set[6] = 0xF4;
+		}
+	}
+
+	write(fd,&cmd_gpio_set[0],strlen(&cmd_gpio_set[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+	
+	if(buf[4] != CMD_SUCCESS)
+		return buf[4];
+
+	return 0;
+}
+
+
+int host_cmd_set_ant_detect(int fd)
+{
+	unsigned char buf[64];
+	int resp_len = 6;
+
+	write(fd,&cmd_ant_det_set[0],strlen(&cmd_ant_det_set[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+
+	if(buf[4] != CMD_SUCCESS)
+		return buf[4];
+
+	return 0;
+}
+
+int host_cmd_get_ant_detect(int fd, int *sensity)
+{
+	unsigned char buf[64];
+	int resp_len = 6;
+
+	write(fd,&cmd_ant_det_get[0],strlen(&cmd_ant_det_get[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+
+	*sensity = buf[4];
+
+	return 0;
+}
+
+int host_cmd_get_reader_id(int fd, char *readerID)
+{
+	unsigned char buf[64];
+	int resp_len = 17;
+
+	write(fd,&cmd_readerid_get[0],strlen(&cmd_readerid_get[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+	for(int i=0; i < resp_len; i++)
+		printf("0x%02x ", buf[i]);
+
+	memcpy(readerID, (char *) &buf[4], 12);
+
+	return 0;
+}
 
 
 
@@ -309,7 +416,29 @@ int	unit_test(int fd)
 	//printf("Get region: %d\n", region);
 
 	// temperature get
-	int temperature;
-	host_cmd_get_temperature(fd, &temperature);
-	printf("Get temperature: %d\n", temperature);
+	//int temperature;
+	//host_cmd_get_temperature(fd, &temperature);
+	//printf("Get temperature: %d\n", temperature);
+
+	// gpio get
+	//int gpio1, gpio2;
+	//host_cmd_get_gpio(fd, &gpio1, &gpio2);
+	//printf("Get gpio1: %d gpio2: %d\n", gpio1, gpio2);
+
+	// gpio set
+	//host_cmd_set_gpio(rd, 0x03, 1);
+
+
+	// antenna detect set
+	//host_cmd_set_ant_detect(fd);
+
+	// get reader ID
+	char readerID[16];
+	host_cmd_get_reader_id(fd, &readerID[0]);
+	for(int i=0; i < 12; i++)
+		printf("0x%02x ", readerID[i]);
+
+
+
+
 }
