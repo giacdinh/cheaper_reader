@@ -468,25 +468,47 @@ int host_cmd_tag_read(int fd)
 }
 */
 
+#define READ_BUF_SIZE	2048
+#define HEADER_SIZE		7	
+int host_process_tag_read(int fd)
+{
+	unsigned char buf[READ_BUF_SIZE];
+	unsigned char header[HEADER_SIZE];
+	unsigned char body[64];
+	int rbyte, databyte;
+
+	rbyte = read(fd, &header[0], HEADER_SIZE);
+
+	while(1)
+	{
+		if(rbyte > 0 && header[0] == 0xA0 && header[1] > 0x0a)
+		{
+			databyte = header[1] - 5;
+			rbyte = read(fd, &body[0], databyte);
+		
+			for(int i=0; i < rbyte; i++)
+				printf("%02x ", body[i]);
+		
+			printf("\n");
+		}
+		else if(header[1] == 0x0a)
+		{	
+			rbyte = read(fd, &body[0], header[1]);
+
+			printf("Total tag read: %d\n", body[3]); 
+			break;
+		}
+		rbyte = read(fd, &header[0], HEADER_SIZE);
+	}
+
+
+}
+
 int host_cmd_read_time_inventory(int fd)
 {
-	unsigned char buf[256];
-	int resp_len = 265, rbyte;
-
 	write(fd,&cmd_read_time_inv[0],strlen(&cmd_read_time_inv[0]));
-	sleep(1);
+	usleep(500000);
 	
-	// Read to get total response length
-	rbyte = read(fd,&buf, resp_len);
-	for(int i=0; i < rbyte; i++)
-	{
-		if(buf[i] == 0xA0 && i > 2)
-			printf("\n");
-		printf("0x%02x ", buf[i]);
-	}	
-
-	printf("\n");
-
 	return 0;
 
 }
@@ -575,8 +597,9 @@ int	unit_test(int fd)
 	//printf("Get profileID: 0x%02x\n", profileID);
 
 	// To read set antenna then read
-	//host_cmd_set_ant(fd, 0x00);
+	host_cmd_set_ant(fd, 0x00);
 	host_cmd_read_time_inventory(fd);
+	host_process_tag_read(fd);
 	
 
 
