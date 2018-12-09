@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-unsigned char cmd[] = {0xA0,0x03,0x01,0x7B};
+unsigned char cmd[] = {0xA0,0x06,0x01,0x81,0x01,0x00,0x00};
 
 int main()
 {
@@ -16,7 +16,7 @@ int main()
     }
     uSum = (~uSum) + 1;
 
-	printf("CS on CMD 0xx%02x 0x%02x\n", cmd[3], uSum);
+	printf("CS on CMD 0x%02x 0x%02x\n", cmd[3], uSum);
     return uSum;
 }
 

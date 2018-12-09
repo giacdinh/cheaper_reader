@@ -169,7 +169,10 @@ int host_cmd_get_ant(int fd, int *antid)
 	
 	read(fd,&buf, resp_len);
 
-	*antid = buf[4] + 1;
+	if(buf[4] != CMD_SUCCESS)
+		return buf[4];
+	else
+		*antid = buf[4] + 1;
 	return 0;
 }
 
@@ -358,12 +361,134 @@ int host_cmd_get_reader_id(int fd, char *readerID)
 	sleep(1);
 	
 	read(fd,&buf, resp_len);
-	for(int i=0; i < resp_len; i++)
-		printf("0x%02x ", buf[i]);
 
 	memcpy(readerID, (char *) &buf[4], 12);
 
 	return 0;
+}
+
+int host_cmd_set_reader_id(int fd)
+{
+	unsigned char buf[64];
+	int resp_len = 6;
+
+	write(fd,&cmd_readerid_set[0],strlen(&cmd_readerid_set[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+
+	if(buf[4] != CMD_SUCCESS)
+		return buf[4];
+
+	return 0;
+}
+
+int host_cmd_set_rflink_profile(int fd, unsigned char profileID)
+{
+	unsigned char buf[64];
+	int resp_len = 6;
+
+	switch(profileID) {
+		case 0xD0:
+			cmd_rflink_prof_set[4] = 0xD0;
+			cmd_rflink_prof_set[5] = 0x22;
+			break;
+		case 0xD1:
+			cmd_rflink_prof_set[4] = 0xD1;
+			cmd_rflink_prof_set[5] = 0x21;
+			break;
+		case 0xD2:
+			cmd_rflink_prof_set[4] = 0xD2;
+			cmd_rflink_prof_set[5] = 0x20;
+			break;
+		case 0xD3:
+			cmd_rflink_prof_set[4] = 0xD3;
+			cmd_rflink_prof_set[5] = 0x1F;
+			break;
+		default:
+			break;
+	}
+
+	write(fd,&cmd_rflink_prof_set[0],strlen(&cmd_rflink_prof_set[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+
+	if(buf[4] != CMD_SUCCESS)
+		return buf[4];
+
+	return 0;
+}
+
+int host_cmd_get_rflink_profile(int fd, unsigned char *profileID)
+{
+	unsigned char buf[64];
+	int resp_len = 6;
+
+	write(fd,&cmd_rflink_prof_get[0],strlen(&cmd_rflink_prof_get[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+
+	*profileID = buf[4];
+
+	return 0;
+}
+
+/*
+int host_cmd_tag_count(int fd)
+{
+	unsigned char buf[64];
+	int resp_len = 14;
+
+	write(fd,&cmd_tag_count[0],strlen(&cmd_tag_count[0]));
+	sleep(1);
+	
+	read(fd,&buf, resp_len);
+
+	printf("ant: %d tagcnt: %d\n", buf[4]+1, buf[5]);
+
+	return 0;
+}
+
+int host_cmd_tag_read(int fd)
+{
+	unsigned char buf[64];
+	int resp_len = 14;
+
+	write(fd,&cmd_tag_read[0],strlen(&cmd_tag_read[0]));
+	sleep(1);
+	
+	// Read to get total response length
+	read(fd,&buf, 4);
+
+	resp_len = buf[1];
+
+	return 0;
+}
+*/
+
+int host_cmd_read_time_inventory(int fd)
+{
+	unsigned char buf[256];
+	int resp_len = 265, rbyte;
+
+	write(fd,&cmd_read_time_inv[0],strlen(&cmd_read_time_inv[0]));
+	sleep(1);
+	
+	// Read to get total response length
+	rbyte = read(fd,&buf, resp_len);
+	for(int i=0; i < rbyte; i++)
+	{
+		if(buf[i] == 0xA0 && i > 2)
+			printf("\n");
+		printf("0x%02x ", buf[i]);
+	}	
+
+	printf("\n");
+
+	return 0;
+
 }
 
 
@@ -428,15 +553,32 @@ int	unit_test(int fd)
 	// gpio set
 	//host_cmd_set_gpio(rd, 0x03, 1);
 
-
 	// antenna detect set
 	//host_cmd_set_ant_detect(fd);
 
+	// set reader ID
+	//host_cmd_set_reader_id(fd);
+	//printf("Done reader id set\n");
+
 	// get reader ID
-	char readerID[16];
-	host_cmd_get_reader_id(fd, &readerID[0]);
-	for(int i=0; i < 12; i++)
-		printf("0x%02x ", readerID[i]);
+	//unsigned char readerID[16];
+	//host_cmd_get_reader_id(fd, &readerID[0]);
+	//for(int i=0; i < 12; i++)
+	//	printf("0x%02x ", readerID[i]);
+
+	// set rflink profile
+	//host_cmd_set_rflink_profile(fd, 0x0D);
+
+	// get rflink profile
+	//unsigned char profileID;
+	//host_cmd_get_rflink_profile(fd, &profileID);
+	//printf("Get profileID: 0x%02x\n", profileID);
+
+	// To read set antenna then read
+	//host_cmd_set_ant(fd, 0x00);
+	host_cmd_read_time_inventory(fd);
+	
+
 
 
 
