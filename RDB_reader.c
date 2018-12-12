@@ -4,9 +4,12 @@
 #include <fcntl.h> 
 #include <termios.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "RDB_reader.h"
 #include "RDB_error.h"
+
+static char hexchars[] = "0123456789ABCDEF";
 
 #define READER_SERIAL_DEV "/dev/ttyUSB0"
 
@@ -14,6 +17,7 @@ int unit_test(int fd);
 unsigned char CheckSum(unsigned char *uBuff, unsigned char uBuffLen);
 int host_cmd_reset(int fd);
 int host_cmd_version(int fd, char *version);
+int hex_to_char(unsigned char *bytes, char *hex, int size);
 
 int set_serial(int fd, int speed)
 {
@@ -74,7 +78,7 @@ int main()
 
 int host_cmd_reset(int fd)
 {
-	write(fd,&cmd_reset[0],strlen(&cmd_reset[0]));
+	write(fd,&cmd_reset[0],cmd_reset[1]+2);
 	return 0;
 }
 
@@ -82,8 +86,8 @@ int host_cmd_version(int fd, char *version)
 {
 	unsigned char buf[64];
 
-	write(fd,&cmd_version[0],strlen(&cmd_version[0]));
-    sleep(1);
+	write(fd,&cmd_version[0],cmd_version[1]+2);
+    usleep(50000);
 	read(fd,&buf,64);
 
 	*version = buf[4] + 0x30;
@@ -98,8 +102,8 @@ int host_cmd_baudrate_38400(int fd)
 {
 	unsigned char buf[64];
 
-	write(fd,&cmd_baud_38400[0],strlen(&cmd_baud_38400[0]));
-    sleep(1);
+	write(fd,&cmd_baud_38400[0],cmd_baud_38400[1]+2);
+    usleep(50000);
 	read(fd,&buf,64);
 
 	if(buf[4] != CMD_SUCCESS)
@@ -112,8 +116,8 @@ int host_cmd_baudrate_115200(int fd)
 {
 	unsigned char buf[64];
 
-	write(fd,&cmd_baud_115200[0],strlen(&cmd_baud_115200[0]));
-    sleep(1);
+	write(fd,&cmd_baud_115200[0],cmd_baud_115200[1]+2);
+	usleep(50000);
 	read(fd,&buf,64);
 
 	if(buf[4] != CMD_SUCCESS)
@@ -131,28 +135,26 @@ int host_cmd_set_ant(int fd, int antid)
 		case 1:
 			cmd_antid_set[4] = 0x00;
 			cmd_antid_set[5] = 0xE7;
-			write(fd,&cmd_antid_set[0],strlen(&cmd_antid_set[0]));
 			break;
 		case 2:
 			cmd_antid_set[4] = 0x01;
 			cmd_antid_set[5] = 0xE6;
-			write(fd,&cmd_antid_set[0],strlen(&cmd_antid_set[0]));
 			break;
 		case 3:
 			cmd_antid_set[4] = 0x02;
 			cmd_antid_set[5] = 0xE5;
-			write(fd,&cmd_antid_set[0],strlen(&cmd_antid_set[0]));
 			break;
 		case 4:
 			cmd_antid_set[4] = 0x03;
 			cmd_antid_set[5] = 0xE4;
-			write(fd,&cmd_antid_set[0],strlen(&cmd_antid_set[0]));
 			break;
 		default:
 			return CMD_ANT_ID_OOR;
 	}
+	write(fd,&cmd_antid_set[0],cmd_antid_set[1]+2);
+	usleep(50000);
 	read(fd,&buf, resp_len);
-
+	
 	if(buf[4] != CMD_SUCCESS)
 		return buf[4];
 
@@ -164,8 +166,8 @@ int host_cmd_get_ant(int fd, int *antid)
 	unsigned char buf[64];
 	int resp_len = 6;
 
-	write(fd,&cmd_antid_get[0],strlen(&cmd_antid_get[0]));
-	sleep(1);
+	write(fd,&cmd_antid_get[0],cmd_antid_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -184,8 +186,8 @@ int host_cmd_set_power(int fd, int power)
 	cmd_power_set[4] = power;
 	cmd_power_set[5] = 0xE5 - power;
 
-	write(fd,&cmd_power_set[0],strlen(&cmd_power_set[0]));
-	sleep(1);
+	write(fd,&cmd_power_set[0],cmd_power_set[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -200,8 +202,8 @@ int host_cmd_get_power(int fd, int *power)
 	unsigned char buf[64];
 	int resp_len = 6;
 
-	write(fd,&cmd_power_get[0],strlen(&cmd_power_get[0]));
-	sleep(1);
+	write(fd,&cmd_power_get[0],cmd_power_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -215,8 +217,8 @@ int host_cmd_set_region_NA(int fd)
 	unsigned char buf[64];
 	int resp_len = 6;
 
-	write(fd,&cmd_region_set[0],strlen(&cmd_region_set[0]));
-	sleep(1);
+	write(fd,&cmd_region_set[0],cmd_region_set[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -231,8 +233,8 @@ int host_cmd_get_region(int fd, int *region)
 	unsigned char buf[64];
 	int resp_len = 8;
 
-	write(fd,&cmd_region_get[0],strlen(&cmd_region_get[0]));
-	sleep(1);
+	write(fd,&cmd_region_get[0],cmd_region_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -246,8 +248,8 @@ int host_cmd_get_temperature(int fd, int *temperature)
 	unsigned char buf[64];
 	int resp_len = 7;
 
-	write(fd,&cmd_temp_get[0],strlen(&cmd_temp_get[0]));
-	sleep(1);
+	write(fd,&cmd_temp_get[0],cmd_temp_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 	
@@ -264,8 +266,8 @@ int host_cmd_get_gpio(int fd, int *gpio1, int *gpio2)
 	unsigned char buf[64];
 	int resp_len = 7;
 
-	write(fd,&cmd_gpio_get[0],strlen(&cmd_gpio_get[0]));
-	sleep(1);
+	write(fd,&cmd_gpio_get[0],cmd_gpio_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 	
@@ -309,8 +311,8 @@ int host_cmd_set_gpio(int fd, int pin, int value)
 		}
 	}
 
-	write(fd,&cmd_gpio_set[0],strlen(&cmd_gpio_set[0]));
-	sleep(1);
+	write(fd,&cmd_gpio_set[0],cmd_gpio_set[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 	
@@ -326,8 +328,8 @@ int host_cmd_set_ant_detect(int fd)
 	unsigned char buf[64];
 	int resp_len = 6;
 
-	write(fd,&cmd_ant_det_set[0],strlen(&cmd_ant_det_set[0]));
-	sleep(1);
+	write(fd,&cmd_ant_det_set[0],cmd_ant_det_set[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -342,8 +344,8 @@ int host_cmd_get_ant_detect(int fd, int *sensity)
 	unsigned char buf[64];
 	int resp_len = 6;
 
-	write(fd,&cmd_ant_det_get[0],strlen(&cmd_ant_det_get[0]));
-	sleep(1);
+	write(fd,&cmd_ant_det_get[0],cmd_ant_det_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -357,8 +359,8 @@ int host_cmd_get_reader_id(int fd, char *readerID)
 	unsigned char buf[64];
 	int resp_len = 17;
 
-	write(fd,&cmd_readerid_get[0],strlen(&cmd_readerid_get[0]));
-	sleep(1);
+	write(fd,&cmd_readerid_get[0],cmd_readerid_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -372,8 +374,8 @@ int host_cmd_set_reader_id(int fd)
 	unsigned char buf[64];
 	int resp_len = 6;
 
-	write(fd,&cmd_readerid_set[0],strlen(&cmd_readerid_set[0]));
-	sleep(1);
+	write(fd,&cmd_readerid_set[0],cmd_readerid_set[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -409,8 +411,8 @@ int host_cmd_set_rflink_profile(int fd, unsigned char profileID)
 			break;
 	}
 
-	write(fd,&cmd_rflink_prof_set[0],strlen(&cmd_rflink_prof_set[0]));
-	sleep(1);
+	write(fd,&cmd_rflink_prof_set[0],cmd_rflink_prof_set[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -425,8 +427,8 @@ int host_cmd_get_rflink_profile(int fd, unsigned char *profileID)
 	unsigned char buf[64];
 	int resp_len = 6;
 
-	write(fd,&cmd_rflink_prof_get[0],strlen(&cmd_rflink_prof_get[0]));
-	sleep(1);
+	write(fd,&cmd_rflink_prof_get[0],cmd_rflink_prof_get[1]+2);
+	usleep(50000);
 	
 	read(fd,&buf, resp_len);
 
@@ -435,40 +437,7 @@ int host_cmd_get_rflink_profile(int fd, unsigned char *profileID)
 	return 0;
 }
 
-/*
-int host_cmd_tag_count(int fd)
-{
-	unsigned char buf[64];
-	int resp_len = 14;
-
-	write(fd,&cmd_tag_count[0],strlen(&cmd_tag_count[0]));
-	sleep(1);
-	
-	read(fd,&buf, resp_len);
-
-	printf("ant: %d tagcnt: %d\n", buf[4]+1, buf[5]);
-
-	return 0;
-}
-
-int host_cmd_tag_read(int fd)
-{
-	unsigned char buf[64];
-	int resp_len = 14;
-
-	write(fd,&cmd_tag_read[0],strlen(&cmd_tag_read[0]));
-	sleep(1);
-	
-	// Read to get total response length
-	read(fd,&buf, 4);
-
-	resp_len = buf[1];
-
-	return 0;
-}
-*/
-
-#define READ_BUF_SIZE	2048
+#define READ_BUF_SIZE	4096	
 #define HEADER_SIZE		7	
 int host_process_tag_read(int fd)
 {
@@ -478,25 +447,26 @@ int host_process_tag_read(int fd)
 	int rbyte, databyte;
 
 	rbyte = read(fd, &header[0], HEADER_SIZE);
-
+	
 	while(1)
 	{
-		if(rbyte > 0 && header[0] == 0xA0 && header[1] > 0x0a)
+		if(header[1] == 0x0a)
+		{	
+			rbyte = read(fd, &body[0], header[1]);
+
+			printf("Total tag read: %d with ant %d\n", body[3], body[1]); 
+			break;
+		}
+		else if(rbyte > 0 && header[0] == 0xA0 && header[1] > 0x0a)
 		{
+		    printf("freq %02x ", header[4]);
 			databyte = header[1] - 5;
 			rbyte = read(fd, &body[0], databyte);
 		
 			for(int i=0; i < rbyte; i++)
 				printf("%02x ", body[i]);
-		
-			printf("\n");
-		}
-		else if(header[1] == 0x0a)
-		{	
-			rbyte = read(fd, &body[0], header[1]);
 
-			printf("Total tag read: %d\n", body[3]); 
-			break;
+			printf(" rssi %d\n", body[rbyte-2]);
 		}
 		rbyte = read(fd, &header[0], HEADER_SIZE);
 	}
@@ -506,15 +476,84 @@ int host_process_tag_read(int fd)
 
 int host_cmd_read_time_inventory(int fd)
 {
-	write(fd,&cmd_read_time_inv[0],strlen(&cmd_read_time_inv[0]));
+	write(fd,&cmd_read_time_inv[0],cmd_read_time_inv[1]+2);
 	usleep(500000);
 	
 	return 0;
-
 }
 
+int host_process_read_all_ants(int fd, RASPI_TAG_T *raspi_tag)
+{
+	unsigned char buf[READ_BUF_SIZE];
+	unsigned char header[HEADER_SIZE];
+	unsigned char epc[64];
+	int rbyte, databyte, i;
+	RDB_TAG_RESP_T *rdb_tag;
+	int raspi_tag_cnt = 0;
+	int location = 0;
 
+	bzero(&buf[0],READ_BUF_SIZE); 
+	rbyte = read(fd,&buf[0], READ_BUF_SIZE);
 
+	for(i = 0; i < rbyte; i++)
+	{
+		if(buf[i] == 0xA0 && buf[i+3] == 0x8A)
+		{
+			if(buf[i+1] < 6) //Less than EPC length + PC + CSUM + CMD + FREQ_ANT
+			{
+				i += buf[i+1] + 1;
+			}
+			else
+			{
+				//printf("\n%02x %02x %02x %02x %02x %02x %02x %02x %02x ", 
+				//		buf[i],buf[i+1],buf[i+2],buf[i+3],buf[i+4],buf[i+5],buf[i+6],buf[i+7],buf[i+8]);
+				//printf("A0: %02x %d EPC len: %d location: %d\n",buf[i],i,buf[i+1]-5,i+buf[i+1]-12);
+				location = i+buf[i+1]-12; // cur_pos + len + header + EPC + rssi + csum
+				hex_to_char(&buf[location],&epc[0],EPC_12BYTE);
+				rdb_tag = (RDB_TAG_RESP_T *) &buf[i];	
+				snprintf(raspi_tag->Tags[raspi_tag_cnt], TAG_SIZE, "%s %d %d %d %d", //NO READ COUNT
+					&epc[0], EPC_12BYTE, (buf[i+4]&0x03)+1, buf[location+EPC_12BYTE],buf[i+4]>>2 ); 
+
+				printf("%s\n", raspi_tag->Tags[raspi_tag_cnt]);
+				raspi_tag_cnt++;
+			}
+		}
+		//else
+		//	printf("%02x ", buf[i]);
+	}
+		
+
+	printf("\n");
+	return 0;
+}
+
+int host_cmd_read_all_ants(int fd)
+{
+	write(fd,&cmd_read_all_ants[0],cmd_read_all_ants[1]+2);
+	usleep(500000);
+	
+	return 0;
+}
+
+int hex_print(unsigned char *cmd, int len)
+{
+	int i;
+	for(int i=0; i < len; i++)
+		printf("%02x ", *cmd++);
+
+	printf("\n");
+}
+
+int hex_to_char(unsigned char *bytes, char *hex, int size)
+{
+	while (size--)
+    {
+		*hex++ = hexchars[*bytes >> 4];
+        *hex++ = hexchars[*bytes & 15];
+        bytes++;
+    }
+    *hex = '\0';
+}
 
 //	for(int i=0; i < resp_len; i++)
 //		printf("0x%02x ", buf[i]);
@@ -534,6 +573,8 @@ unsigned char CheckSum(unsigned char *uBuff, unsigned char uBuffLen)
 int	unit_test(int fd)
 {
 	char version[16];
+	int error;
+	RASPI_TAG_T raspi_tag;
 	// reset
 	//host_cmd_reset(fd);
 
@@ -542,9 +583,11 @@ int	unit_test(int fd)
 	//printf("%s\n", &version[0]);
 
 	// ant ID
-	//int antid;
-	//host_cmd_get_ant(fd, &antid);
-	//printf("Get antid: %d\n", antid);
+	//host_cmd_set_ant(fd, 3);
+
+	//int getantid;
+	//host_cmd_get_ant(fd, &getantid);
+	//printf("Get antid: %d\n", getantid+1);
 
 	// set power
 	//host_cmd_set_power(fd, 33);
@@ -597,11 +640,15 @@ int	unit_test(int fd)
 	//printf("Get profileID: 0x%02x\n", profileID);
 
 	// To read set antenna then read
-	host_cmd_set_ant(fd, 0x00);
-	host_cmd_read_time_inventory(fd);
-	host_process_tag_read(fd);
+	//error = host_cmd_set_ant(fd, 0x00);
+	//if(error > 0)
+	//	printf("Set ant failed error: %d\n", error);
+	//host_cmd_read_time_inventory(fd);
+	//host_process_tag_read(fd);
 	
-
+	// To read set antenna then read
+	host_cmd_read_all_ants(fd);
+	host_process_read_all_ants(fd, &raspi_tag);
 
 
 
