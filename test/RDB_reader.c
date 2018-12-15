@@ -497,30 +497,27 @@ int host_process_read_all_ants(int fd, RASPI_TAG_T *raspi_tag)
 
 	for(i = 0; i < rbyte; i++)
 	{
-		if(buf[i] != 0xA0 && buf[i+3] != 0x8A)
-			printf("%02x ", buf[i]);
-		else if(buf[i] == 0xA0 && buf[i+3] == 0x8A)
+		if(buf[i] == 0xA0 && buf[i+3] == 0x8A)
 		{
-			if(buf[i+1] < 16) //Less than EPC length + PC + CSUM + CMD + FREQ_ANT
+			if(buf[i+1] < 6) //Less than EPC length + PC + CSUM + CMD + FREQ_ANT
 			{
 				i += buf[i+1] + 1;
-				continue;
 			}
 			else
 			{
 				location = i+buf[i+1]-12; // cur_pos + len + header + EPC + rssi + csum
-				bzero(&epc[0],64);
 				hex_to_char(&buf[location],&epc[0],EPC_12BYTE);
 				rdb_tag = (RDB_TAG_RESP_T *) &buf[i];
 				// RFR Tag message EPC-LEN-RSSI-ANTID-FREQ	
 				snprintf(raspi_tag->Tags[raspi_tag_cnt], TAG_SIZE, "%s %d %d %d %d", //NO READ COUNT
 					&epc[0], EPC_12BYTE, (buf[i+4]&0x03)+1, buf[location+EPC_12BYTE],buf[i+4]>>2 ); 
 
-				printf("\n%s", raspi_tag->Tags[raspi_tag_cnt]);
+				printf("%s\n", raspi_tag->Tags[raspi_tag_cnt]);
 				raspi_tag_cnt++;
 			}
-			printf("\t%02x ", buf[i]);
 		}
+		else
+			printf("%02x ", buf[i]);
 	}
 		
 
@@ -554,6 +551,11 @@ int hex_to_char(unsigned char *bytes, char *hex, int size)
         bytes++;
     }
     *hex = '\0';
+}
+
+int dbm_to_rssi(int dbm)
+{
+	return (2*(100-dbm));
 }
 
 
