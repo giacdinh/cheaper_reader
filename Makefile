@@ -1,4 +1,4 @@
-
+all:
 
 RDB_reader:
 	gcc -I./ -o RDB_reader RDB_reader.c
