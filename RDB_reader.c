@@ -11,7 +11,11 @@
 
 static char hexchars[] = "0123456789ABCDEF";
 
+#ifdef USEHOST
 #define READER_SERIAL_DEV "/dev/ttyUSB0"
+#else
+#define READER_SERIAL_DEV "/dev/ttyAMA0"
+#endif
 
 int unit_test(int fd);
 unsigned char CheckSum(unsigned char *uBuff, unsigned char uBuffLen);
@@ -66,7 +70,7 @@ int main()
 	if( fd < 0)
 	{
 		//logging(LOG_ERROR, "Serial port open failed\n");
-		printf("Failed to open serial port\n");
+		printf("Failed to open serial port: %s\n", READER_SERIAL_DEV);
 		return -1;
 	}
 
