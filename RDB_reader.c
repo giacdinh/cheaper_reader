@@ -92,7 +92,7 @@ int host_cmd_version(int fd, char *version)
 	unsigned char buf[64];
 
 	write(fd,&cmd_version[0],cmd_version[1]+2);
-    usleep(50000);
+    reader_delay_sleep();
 	read(fd,&buf,64);
 
 	*version = buf[4] + 0x30;
@@ -108,7 +108,7 @@ int host_cmd_baudrate_38400(int fd)
 	unsigned char buf[64];
 
 	write(fd,&cmd_baud_38400[0],cmd_baud_38400[1]+2);
-    usleep(50000);
+    reader_delay_sleep();
 	read(fd,&buf,64);
 
 	if(buf[4] != CMD_SUCCESS)
@@ -122,7 +122,7 @@ int host_cmd_baudrate_115200(int fd)
 	unsigned char buf[64];
 
 	write(fd,&cmd_baud_115200[0],cmd_baud_115200[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	read(fd,&buf,64);
 
 	if(buf[4] != CMD_SUCCESS)
@@ -157,7 +157,7 @@ int host_cmd_set_ant(int fd, int antid)
 			return CMD_ANT_ID_OOR;
 	}
 	write(fd,&cmd_antid_set[0],cmd_antid_set[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	read(fd,&buf, resp_len);
 	
 	if(buf[4] != CMD_SUCCESS)
@@ -172,7 +172,7 @@ int host_cmd_get_ant(int fd, int *antid)
 	int resp_len = 6;
 
 	write(fd,&cmd_antid_get[0],cmd_antid_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -192,7 +192,7 @@ int host_cmd_set_power(int fd, int power)
 	cmd_power_set[5] = 0xE5 - power;
 
 	write(fd,&cmd_power_set[0],cmd_power_set[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -208,7 +208,7 @@ int host_cmd_get_power(int fd, int *power)
 	int resp_len = 6;
 
 	write(fd,&cmd_power_get[0],cmd_power_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -223,7 +223,7 @@ int host_cmd_set_region_NA(int fd)
 	int resp_len = 6;
 
 	write(fd,&cmd_region_set[0],cmd_region_set[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -239,7 +239,7 @@ int host_cmd_get_region(int fd, int *region)
 	int resp_len = 8;
 
 	write(fd,&cmd_region_get[0],cmd_region_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -254,7 +254,7 @@ int host_cmd_get_temperature(int fd, int *temperature)
 	int resp_len = 7;
 
 	write(fd,&cmd_temp_get[0],cmd_temp_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 	
@@ -272,7 +272,7 @@ int host_cmd_get_gpio(int fd, int *gpio1, int *gpio2)
 	int resp_len = 7;
 
 	write(fd,&cmd_gpio_get[0],cmd_gpio_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 	
@@ -317,7 +317,7 @@ int host_cmd_set_gpio(int fd, int pin, int value)
 	}
 
 	write(fd,&cmd_gpio_set[0],cmd_gpio_set[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 	
@@ -334,7 +334,7 @@ int host_cmd_set_ant_detect(int fd)
 	int resp_len = 6;
 
 	write(fd,&cmd_ant_det_set[0],cmd_ant_det_set[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -350,7 +350,7 @@ int host_cmd_get_ant_detect(int fd, int *sensity)
 	int resp_len = 6;
 
 	write(fd,&cmd_ant_det_get[0],cmd_ant_det_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -365,7 +365,7 @@ int host_cmd_get_reader_id(int fd, char *readerID)
 	int resp_len = 17;
 
 	write(fd,&cmd_readerid_get[0],cmd_readerid_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -380,7 +380,7 @@ int host_cmd_set_reader_id(int fd)
 	int resp_len = 6;
 
 	write(fd,&cmd_readerid_set[0],cmd_readerid_set[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -417,7 +417,7 @@ int host_cmd_set_rflink_profile(int fd, unsigned char profileID)
 	}
 
 	write(fd,&cmd_rflink_prof_set[0],cmd_rflink_prof_set[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -433,7 +433,7 @@ int host_cmd_get_rflink_profile(int fd, unsigned char *profileID)
 	int resp_len = 6;
 
 	write(fd,&cmd_rflink_prof_get[0],cmd_rflink_prof_get[1]+2);
-	usleep(50000);
+	reader_delay_sleep();
 	
 	read(fd,&buf, resp_len);
 
@@ -489,7 +489,7 @@ int host_cmd_read_time_inventory(int fd)
 
 int reader_delay_sleep()
 {
-    usleep(1500000);
+    usleep(150000);
 }
 
 int host_process_read_all_ants(int fd, RASPI_TAG_T *raspi_tag)
@@ -721,9 +721,12 @@ int	unit_test(int fd)
 
 
 	// Single port reader module
+for(;;)
+{
     host_cmd_set_ant(fd, 0);
     host_cmd_read_single_port(fd);
     host_process_read_single_port(fd, &raspi_tag);
+}
 
 
 }
