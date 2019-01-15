@@ -18,6 +18,7 @@ unsigned char CheckSum(unsigned char *uBuff, unsigned char uBuffLen);
 int host_cmd_reset(int fd);
 int host_cmd_version(int fd, char *version);
 int hex_to_char(unsigned char *bytes, char *hex, int size);
+int reader_delay_sleep();
 
 int set_serial(int fd, int speed)
 {
@@ -477,9 +478,14 @@ int host_process_tag_read(int fd)
 int host_cmd_read_time_inventory(int fd)
 {
 	write(fd,&cmd_read_time_inv[0],cmd_read_time_inv[1]+2);
-	usleep(500000);
+	reader_delay_sleep();
 	
 	return 0;
+}
+
+int reader_delay_sleep()
+{
+    usleep(1500000);
 }
 
 int host_process_read_all_ants(int fd, RASPI_TAG_T *raspi_tag)
@@ -498,7 +504,9 @@ int host_process_read_all_ants(int fd, RASPI_TAG_T *raspi_tag)
 	for(i = 0; i < rbyte; i++)
 	{
 		if(buf[i] != 0xA0 && buf[i+3] != 0x8A)
-			printf("%02x ", buf[i]);
+		{
+			//printf("%02x ", buf[i]);
+		}
 		else if(buf[i] == 0xA0 && buf[i+3] == 0x8A)
 		{
 			if(buf[i+1] < 16) //Less than EPC length + PC + CSUM + CMD + FREQ_ANT
@@ -513,7 +521,62 @@ int host_process_read_all_ants(int fd, RASPI_TAG_T *raspi_tag)
 				hex_to_char(&buf[location],&epc[0],EPC_12BYTE);
 				rdb_tag = (RDB_TAG_RESP_T *) &buf[i];
 				// RFR Tag message EPC-LEN-RSSI-ANTID-FREQ	
-				snprintf(raspi_tag->Tags[raspi_tag_cnt], TAG_SIZE, "%s %d %d %d %d", //NO READ COUNT
+				snprintf(raspi_tag->Tags[raspi_tag_cnt], TAG_SIZE, "%s %d %02d %02d %02d", //NO READ COUNT
+					&epc[0], EPC_12BYTE, (buf[i+4]&0x03)+1, buf[location+EPC_12BYTE],buf[i+4]>>2 ); 
+
+				printf("\n%s", raspi_tag->Tags[raspi_tag_cnt]);
+				raspi_tag_cnt++;
+			}
+			//printf("\t%02x ", buf[i]);
+		}
+	}
+
+	printf("\n Total tags: %d\n", raspi_tag_cnt);
+	return 0;
+}
+
+int host_cmd_read_all_ants(int fd)
+{
+	write(fd,&cmd_read_all_ants[0],cmd_read_all_ants[1]+2);
+	reader_delay_sleep();
+	
+	return 0;
+}
+
+int host_process_read_single_port(int fd, RASPI_TAG_T *raspi_tag)
+{
+	unsigned char buf[READ_BUF_SIZE];
+	unsigned char header[HEADER_SIZE];
+	unsigned char epc[64];
+	int rbyte, databyte, i;
+	RDB_TAG_RESP_T *rdb_tag;
+	int raspi_tag_cnt = 0;
+	int location = 0;
+
+	bzero(&buf[0],READ_BUF_SIZE); 
+	rbyte = read(fd,&buf[0], READ_BUF_SIZE);
+
+	for(i = 0; i < rbyte; i++)
+	{
+		if(buf[i] != 0xA0 && buf[i+3] != 0x8B)
+		{
+			printf("%02x ", buf[i]);
+		}
+		else if(buf[i] == 0xA0 && buf[i+3] == 0x8B)
+		{
+			if(buf[i+1] < 16) //Less than EPC length + PC + CSUM + CMD + FREQ_ANT
+			{
+				i += buf[i+1] + 1;
+				continue;
+			}
+			else
+			{
+				location = i+buf[i+1]-12; // cur_pos + len + header + EPC + rssi + csum
+				bzero(&epc[0],64);
+				hex_to_char(&buf[location],&epc[0],EPC_12BYTE);
+				rdb_tag = (RDB_TAG_RESP_T *) &buf[i];
+				// RFR Tag message EPC-LEN-RSSI-ANTID-FREQ	
+				snprintf(raspi_tag->Tags[raspi_tag_cnt], TAG_SIZE, "%s %d %02d %02d %02d", //NO READ COUNT
 					&epc[0], EPC_12BYTE, (buf[i+4]&0x03)+1, buf[location+EPC_12BYTE],buf[i+4]>>2 ); 
 
 				printf("\n%s", raspi_tag->Tags[raspi_tag_cnt]);
@@ -522,19 +585,19 @@ int host_process_read_all_ants(int fd, RASPI_TAG_T *raspi_tag)
 			printf("\t%02x ", buf[i]);
 		}
 	}
-		
+	printf("\n Total tags: %d\n", raspi_tag_cnt);
 
-	printf("\n");
-	return 0;
+    return 0;
 }
 
-int host_cmd_read_all_ants(int fd)
+int host_cmd_read_single_port(int fd)
 {
-	write(fd,&cmd_read_all_ants[0],cmd_read_all_ants[1]+2);
-	usleep(500000);
-	
-	return 0;
+        write(fd,&cmd_read_single_port[0],cmd_read_single_port[1]+2);
+        reader_delay_sleep();
+
+        return 0;
 }
+
 
 int hex_print(unsigned char *cmd, int len)
 {
@@ -649,10 +712,14 @@ int	unit_test(int fd)
 	//host_process_tag_read(fd);
 	
 	// To read set antenna then read
-	host_cmd_read_all_ants(fd);
-	host_process_read_all_ants(fd, &raspi_tag);
+	//host_cmd_read_all_ants(fd);
+	//host_process_read_all_ants(fd, &raspi_tag);
 
 
+	// Single port reader module
+    host_cmd_set_ant(fd, 0);
+    host_cmd_read_single_port(fd);
+    host_process_read_single_port(fd, &raspi_tag);
 
 
 }
